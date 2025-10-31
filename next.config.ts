@@ -27,6 +27,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    // Proxy para API em desenvolvimento (evita problemas de CORS)
+    let apiBaseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || 'http://72.60.155.229:3333';
+    // Remove barra final se existir
+    apiBaseUrl = apiBaseUrl.trim().replace(/\/+$/, '');
+
+    return [
+      {
+        source: '/api/proxy/:path*',
+        destination: `${apiBaseUrl}/:path*`,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
