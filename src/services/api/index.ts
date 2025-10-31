@@ -226,3 +226,53 @@ export const reportApi = {
       body: data,
     }),
 };
+
+export interface CreateReviewPayload {
+  productId: string;
+  rating: number;
+  comment?: string | null;
+  imageIds?: string[] | null;
+}
+
+export interface ReviewResponse {
+  averageRating: number;
+  totalReviews: number;
+}
+
+export const reviewApi = {
+  create: (data: CreateReviewPayload) =>
+    apiRequest<ReviewResponse>('/products/reviews', {
+      method: 'POST',
+      body: data,
+    }),
+  update: (data: CreateReviewPayload) =>
+    apiRequest<ReviewResponse>('/products/reviews', {
+      method: 'PUT',
+      body: data,
+    }),
+  delete: (productId: string) =>
+    apiRequest<ReviewResponse>(`/products/reviews/${productId}`, {
+      method: 'DELETE',
+    }),
+  list: (productId: string, page?: number, limit?: number) =>
+    apiRequest<{
+      reviews: Array<{
+        id: string;
+        rating: number;
+        comment: string | null;
+        createdAt: string;
+        user: {
+          id: string;
+          name: string;
+          avatar: string | null;
+        };
+        images: Array<{ attachmentId: string }>;
+      }>;
+      pagination: {
+        page: number;
+        limit: number;
+        total: number;
+        totalPages: number;
+      };
+    }>(`/products/${productId}/reviews?page=${page ?? 1}&limit=${limit ?? 10}`),
+};

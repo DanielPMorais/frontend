@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { productApi } from '@/services/api';
+import { productApi, reviewApi, uploadApi } from '@/services/api';
 import { ApiProduct } from '@/types/product';
+import useStoreUser from '@/hooks/use-store-user';
 import { MessageSquare, Star } from 'lucide-react';
 import Image from 'next/image';
 import { useParams, useRouter } from 'next/navigation';
@@ -50,6 +51,7 @@ type ToastType = 'success' | 'error' | null;
 export default function ProductEvaluationPage() {
   const params = useParams();
   const router = useRouter();
+  const user = useStoreUser((state) => state.user);
   const [product, setProduct] = useState<ApiProduct | null>(null);
   const [media, setMedia] = useState<File[]>([]);
   const [reviewText, setReviewText] = useState('');
@@ -131,7 +133,7 @@ export default function ProductEvaluationPage() {
 
   const handleSubmit = async () => {
     // Validação dos campos obrigatórios
-    if (rating === 0) {
+    if (rating === 0 || rating < 1 || rating > 5) {
       showToast(
         'Por favor, avalie o produto com pelo menos 1 estrela!',
         'error',
@@ -139,20 +141,54 @@ export default function ProductEvaluationPage() {
       return;
     }
 
+    // Verificar se o usuário está autenticado
+    if (!user.isAuthenticated || !user.userId) {
+      showToast(
+        'Você precisa estar autenticado para avaliar um produto.',
+        'error',
+      );
+      router.push('/auth/login');
+      return;
+    }
+
+    // Validar limite de imagens (máximo 5 conforme backend)
+    if (media.length > 5) {
+      showToast('Você pode adicionar no máximo 5 imagens.', 'error');
+      return;
+    }
+
+    // Validar tamanho do comentário (máximo 500 caracteres)
+    if (reviewText && reviewText.length > 500) {
+      showToast('O comentário não pode exceder 500 caracteres.', 'error');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // TODO: Implementar chamada à API
-      // const formData = new FormData();
-      // formData.append('productId', id);
-      // formData.append('rating', rating.toString());
-      // formData.append('reviewText', reviewText);
-      // formData.append('isAnonymous', isAnonymous.toString());
-      // media.forEach((file) => formData.append('media', file));
-      // await reviewApi.create(formData);
+      // Primeiro, fazer upload das imagens (apenas imagens, não vídeos)
+      const imageIds: string[] = [];
+      const imageFiles = media.filter((file) => file.type.startsWith('image/'));
 
-      // Simulação de envio (remover quando integrar com API)
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (imageFiles.length > 0) {
+        const uploadPromises = imageFiles.map((file) =>
+          uploadApi.uploadFile(file),
+        );
+        const uploadResults = await Promise.all(uploadPromises);
+        imageIds.push(...uploadResults.map((result) => result.attachmentId));
+      }
+
+      // Criar a avaliação
+      const reviewData = {
+        productId: id,
+        rating: rating,
+        comment: reviewText.trim() || null,
+        imageIds: imageIds.length > 0 ? imageIds : null,
+      };
+
+      const response = await reviewApi.create(reviewData);
+
+      console.log('Avaliação criada com sucesso:', response);
 
       showToast(
         'Avaliação enviada com sucesso! Obrigado pelo seu feedback!',
@@ -175,10 +211,23 @@ export default function ProductEvaluationPage() {
       }, 2000);
     } catch (error) {
       console.error('Erro ao enviar avaliação:', error);
-      showToast(
-        'Erro ao enviar avaliação. Por favor, tente novamente.',
-        'error',
-      );
+
+      // Tratar erros específicos
+      let errorMessage =
+        'Erro ao enviar avaliação. Por favor, tente novamente.';
+
+      if (error && typeof error === 'object' && 'status' in error) {
+        const status = (error as { status?: number }).status;
+        if (status === 401) {
+          errorMessage =
+            'Você precisa estar autenticado para avaliar um produto.';
+        } else if (status === 400 || status === 403) {
+          errorMessage =
+            'Não foi possível criar a avaliação. Verifique os dados e tente novamente.';
+        }
+      }
+
+      showToast(errorMessage, 'error');
     } finally {
       setIsSubmitting(false);
     }
