@@ -241,17 +241,25 @@ export interface ReviewResponse {
 
 export const reviewApi = {
   create: (data: CreateReviewPayload) =>
-    apiRequest<ReviewResponse>('/products/reviews', {
+    apiRequest<ReviewResponse>(`/products/${data.productId}/reviews`, {
       method: 'POST',
-      body: data,
+      body: {
+        rating: data.rating,
+        comment: data.comment,
+        imageIds: data.imageIds,
+      },
     }),
   update: (data: CreateReviewPayload) =>
-    apiRequest<ReviewResponse>('/products/reviews', {
+    apiRequest<ReviewResponse>(`/products/${data.productId}/reviews`, {
       method: 'PUT',
-      body: data,
+      body: {
+        rating: data.rating,
+        comment: data.comment,
+        imageIds: data.imageIds,
+      },
     }),
   delete: (productId: string) =>
-    apiRequest<ReviewResponse>(`/products/reviews/${productId}`, {
+    apiRequest<ReviewResponse>(`/products/${productId}/reviews`, {
       method: 'DELETE',
     }),
   list: (productId: string, page?: number, limit?: number) =>

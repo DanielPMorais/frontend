@@ -170,12 +170,30 @@ export default function ProductEvaluationPage() {
       const imageIds: string[] = [];
       const imageFiles = media.filter((file) => file.type.startsWith('image/'));
 
+      console.log('[Review] Iniciando upload de imagens:', {
+        totalFiles: media.length,
+        imageFiles: imageFiles.length,
+      });
+
       if (imageFiles.length > 0) {
-        const uploadPromises = imageFiles.map((file) =>
-          uploadApi.uploadFile(file),
-        );
-        const uploadResults = await Promise.all(uploadPromises);
-        imageIds.push(...uploadResults.map((result) => result.attachmentId));
+        try {
+          const uploadPromises = imageFiles.map((file) =>
+            uploadApi.uploadFile(file),
+          );
+          const uploadResults = await Promise.all(uploadPromises);
+          imageIds.push(...uploadResults.map((result) => result.attachmentId));
+          console.log('[Review] Upload concluído:', {
+            uploadedCount: imageIds.length,
+            imageIds,
+          });
+        } catch (uploadError) {
+          console.error('[Review] Erro no upload de imagens:', uploadError);
+          showToast(
+            'Erro ao fazer upload das imagens. Tente novamente.',
+            'error',
+          );
+          return;
+        }
       }
 
       // Criar a avaliação
@@ -186,9 +204,11 @@ export default function ProductEvaluationPage() {
         imageIds: imageIds.length > 0 ? imageIds : null,
       };
 
+      console.log('[Review] Enviando avaliação:', reviewData);
+
       const response = await reviewApi.create(reviewData);
 
-      console.log('Avaliação criada com sucesso:', response);
+      console.log('[Review] Avaliação criada com sucesso:', response);
 
       showToast(
         'Avaliação enviada com sucesso! Obrigado pelo seu feedback!',
@@ -210,20 +230,42 @@ export default function ProductEvaluationPage() {
         window.scrollTo({ top: 0, behavior: 'auto' });
       }, 2000);
     } catch (error) {
-      console.error('Erro ao enviar avaliação:', error);
+      console.error('[Review] Erro completo ao enviar avaliação:', error);
 
       // Tratar erros específicos
       let errorMessage =
         'Erro ao enviar avaliação. Por favor, tente novamente.';
 
-      if (error && typeof error === 'object' && 'status' in error) {
-        const status = (error as { status?: number }).status;
-        if (status === 401) {
+      if (error && typeof error === 'object') {
+        const err = error as {
+          status?: number;
+          message?: string;
+          response?: unknown;
+        };
+
+        console.log('[Review] Detalhes do erro:', {
+          status: err.status,
+          message: err.message,
+          response: err.response,
+        });
+
+        if (err.status === 401) {
           errorMessage =
             'Você precisa estar autenticado para avaliar um produto.';
-        } else if (status === 400 || status === 403) {
-          errorMessage =
-            'Não foi possível criar a avaliação. Verifique os dados e tente novamente.';
+        } else if (err.status === 400) {
+          const responseMessage =
+            err.response &&
+            typeof err.response === 'object' &&
+            'message' in err.response
+              ? String(err.response.message)
+              : 'Dados inválidos. Verifique as informações e tente novamente.';
+          errorMessage = responseMessage;
+        } else if (err.status === 403) {
+          errorMessage = 'Você não tem permissão para avaliar este produto.';
+        } else if (err.status === 404) {
+          errorMessage = 'Produto não encontrado.';
+        } else if (err.message) {
+          errorMessage = err.message;
         }
       }
 
