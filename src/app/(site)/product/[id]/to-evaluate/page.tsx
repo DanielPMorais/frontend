@@ -127,7 +127,7 @@ export default function ProductEvaluationPage() {
         window.scrollTo({ top: 0 });
       }, 1200);
     },
-    onError: (error) => {
+    onError: (error: unknown) => {
       if (error instanceof AxiosError) {
         const message =
           error.response?.data?.message || 'Ocorreu um erro desconhecido.';

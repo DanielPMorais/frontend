@@ -52,6 +52,38 @@ export const apiRequest = async <T>(
 ): Promise<T> => {
   const devMode = process.env.NEXT_PUBLIC_DEVELOPMENT === 'true';
 
+  const isClient = typeof window !== 'undefined';
+  const isDev = process.env.NODE_ENV === 'development';
+
+  let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!baseUrl) {
+    throw new Error('API_BASE_URL is not defined in environment variables');
+  }
+
+  // Remove barra final da baseUrl se existir
+  baseUrl = baseUrl.trim().replace(/\/+$/, '');
+
+  // Garante que o endpoint começa com /
+  const normalizedEndpoint = endpoint.startsWith('/')
+    ? endpoint
+    : `/${endpoint}`;
+
+  // Em desenvolvimento no cliente, usa proxy do Next.js para evitar CORS
+  // O proxy está configurado em next.config.ts
+  const useProxy = isClient && isDev;
+  const url = useProxy
+    ? `/api/proxy${normalizedEndpoint}`
+    : `${baseUrl}${normalizedEndpoint}`;
+
+  console.log('[API Request]', {
+    method: method || (body ? 'POST' : 'GET'),
+    url,
+    baseUrl: useProxy ? 'via proxy (/api/proxy)' : baseUrl,
+    endpoint: normalizedEndpoint,
+    usingProxy: useProxy,
+  });
+
   try {
     const response = await apiClient<T>({
       url: endpoint,
