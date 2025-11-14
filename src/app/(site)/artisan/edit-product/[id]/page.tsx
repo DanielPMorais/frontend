@@ -5,8 +5,6 @@ import { PhotoGallery } from '@/components/features/artisan/add-product/photo-ga
 import { PriceStockForm } from '@/components/features/artisan/add-product/price-stock-form';
 import { ProductInfoForm } from '@/components/features/artisan/add-product/product-info-form';
 import { Button } from '@/components/ui/button';
-import { materiaPrima } from '@/constants/materia-prima';
-import { tecnicas } from '@/constants/tecnicas';
 import { useProductForm } from '@/hooks/use-product-form';
 import { productApi } from '@/services/api';
 import { ProductForm } from '@/types/product-form';
@@ -17,7 +15,7 @@ import { use, useEffect, useState } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { FaRegTrashAlt } from 'react-icons/fa';
 import { FaCheck } from 'react-icons/fa6';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 
 const EditProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const router = useRouter();
@@ -143,7 +141,6 @@ const EditProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
 
   return (
     <div className="min-h-screen bg-[#A6E3E9] text-midnight">
-      <Toaster richColors position="bottom-right" />
       <div className="w-10/12 mx-auto pt-10">
         <div className="flex items-center mb-6">
           <ArrowLeft
@@ -174,8 +171,6 @@ const EditProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
                 register={register}
                 control={control}
                 errors={errors}
-                materiaPrima={materiaPrima}
-                tecnicas={tecnicas}
               />
 
               <div className="mb-8 mt-8">
@@ -204,8 +199,6 @@ const EditProductPage = ({ params }: { params: Promise<{ id: string }> }) => {
                   register={register}
                   control={control}
                   errors={errors}
-                  materiaPrima={materiaPrima}
-                  tecnicas={tecnicas}
                 />
 
                 <div className="mt-6">

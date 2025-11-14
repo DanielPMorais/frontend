@@ -1,4 +1,15 @@
+import useStoreUser from '@/hooks/use-store-user';
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
+import { toast } from 'sonner';
+
+const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+if (!baseUrl) {
+  throw new Error('API_BASE_URL is not defined in environment variables');
+}
+
+export const apiClient = axios.create({
+  baseURL: baseUrl,
+});
 
 type FetchOptions = {
   body?: unknown;
@@ -7,6 +18,27 @@ type FetchOptions = {
   method?: AxiosRequestConfig['method'];
   isFormData?: boolean;
 };
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError) => {
+    if (error.response && error.response.status === 401) {
+      toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+
+      const { resetStore } = useStoreUser.getState();
+      resetStore();
+
+      setTimeout(() => {
+        window.location.href = '/auth/login';
+      }, 5000);
+    } else if (error.response && error.response.status === 403) {
+      console.warn(
+        'Interceptador: Acesso proibido (403). O usuário está logado, mas não tem permissão.',
+      );
+    }
+    return Promise.reject(error);
+  },
+);
 
 export const apiRequest = async <T>(
   endpoint: string,
@@ -19,41 +51,10 @@ export const apiRequest = async <T>(
   }: FetchOptions = {},
 ): Promise<T> => {
   const devMode = process.env.NEXT_PUBLIC_DEVELOPMENT === 'true';
-  const isClient = typeof window !== 'undefined';
-  const isDev = process.env.NODE_ENV === 'development';
-
-  let baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
-
-  if (!baseUrl) {
-    throw new Error('API_BASE_URL is not defined in environment variables');
-  }
-
-  // Remove barra final da baseUrl se existir
-  baseUrl = baseUrl.trim().replace(/\/+$/, '');
-
-  // Garante que o endpoint começa com /
-  const normalizedEndpoint = endpoint.startsWith('/')
-    ? endpoint
-    : `/${endpoint}`;
-
-  // Em desenvolvimento no cliente, usa proxy do Next.js para evitar CORS
-  // O proxy está configurado em next.config.ts
-  const useProxy = isClient && isDev;
-  const url = useProxy
-    ? `/api/proxy${normalizedEndpoint}`
-    : `${baseUrl}${normalizedEndpoint}`;
-
-  console.log('[API Request]', {
-    method: method || (body ? 'POST' : 'GET'),
-    url,
-    baseUrl: useProxy ? 'via proxy (/api/proxy)' : baseUrl,
-    endpoint: normalizedEndpoint,
-    usingProxy: useProxy,
-  });
 
   try {
-    const response = await axios<T>({
-      url: url,
+    const response = await apiClient<T>({
+      url: endpoint,
       method: method || (body ? 'POST' : 'GET'),
       data: body,
       headers: {

@@ -3,7 +3,8 @@ import { PhotoSlot } from '@/components/features/artisan/add-product/photo-slot'
 import InputField from '@/components/features/artisan/input-field';
 import { Button } from '@/components/ui/button';
 import { useProductForm } from '@/hooks/use-product-form';
-import { authApi } from '@/services/api';
+import useStoreUser from '@/hooks/use-store-user';
+import { userApi } from '@/services/api';
 import { GetMyProfile } from '@/types/artisan';
 import { AxiosError } from 'axios';
 import { ArrowLeft } from 'lucide-react';
@@ -11,9 +12,10 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { SubmitHandler, useForm } from 'react-hook-form';
 import { TbTrash } from 'react-icons/tb';
-import { toast, Toaster } from 'sonner';
+import { toast } from 'sonner';
 
 function EditProfilePage() {
+  const setUser = useStoreUser((state) => state.setUser);
   const {
     register,
     formState: { errors },
@@ -37,15 +39,33 @@ function EditProfilePage() {
       document.getElementById('photo-upload')?.click();
   };
 
+  const formatPhone = (value: string) => {
+    const digits = value.replace(/\D/g, '');
+
+    if (!digits) return '';
+
+    if (digits.length <= 4) {
+      return digits;
+    }
+
+    if (digits.length <= 8) {
+      return digits.replace(/(\d{4})(\d{1,4})/, '$1-$2');
+    }
+
+    return digits.replace(/(\d{5})(\d{1,4})/, '$1-$2');
+  };
+
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const profile = await authApi.getMe();
+        const profile = await userApi.getMe();
         if (profile) {
           const phone = profile.user.phone || '';
           let ddd = '';
           let numero = '';
-          const match = phone.match(/^\+55(\d{2})(\d{4,5})(\d{4})$/);
+          const match =
+            phone.match(/^\+55(\d{2})(\d{4,5})(\d{4})$/) ||
+            phone.match(/^\(?(\d{2})\)?[\s-]?(\d{4,5})[\s-]?(\d{4})$/);
           if (match) {
             ddd = match[1];
             numero = `${match[2]}-${match[3]}`;
@@ -74,7 +94,14 @@ function EditProfilePage() {
         avatarId: photoIds[0] || null,
       };
       delete updatedData.ddd;
-      await authApi.updateMe(updatedData);
+      await userApi.updateMe(updatedData);
+      const updatedProfile = await userApi.getMe();
+      setUser({
+        userId: updatedProfile.user.id,
+        userName: updatedProfile.user.name,
+        userPhoto: updatedProfile.user.avatar,
+        artisanUserName: updatedProfile.user.artisan?.artisanUserName,
+      });
       toast.success('Perfil atualizado com sucesso!');
       if (data.artisan?.artisanUserName)
         router.push(`/artisan/${data.artisan.artisanUserName}`);
@@ -88,7 +115,6 @@ function EditProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#A6E3E9] text-midnight">
-      <Toaster richColors position="bottom-right" />
       <div className="w-11/12 md:w-10/12 mx-auto pt-6 md:pt-10">
         <div className="flex items-center mb-6">
           <ArrowLeft
@@ -161,7 +187,7 @@ function EditProfilePage() {
                   type="text"
                   required
                   {...register('artisan.artisanUserName', {
-                    required: 'Nome do produto é obrigatório',
+                    required: 'Nome é obrigatório',
                   })}
                 />
                 {errors.artisan?.artisanUserName && (
@@ -193,13 +219,18 @@ function EditProfilePage() {
                         required: 'Telefone é obrigatório',
                       })}
                       className="w-16"
+                      maxLength={3}
                     />
                     <InputField
                       type="text"
                       required
                       {...register('phone', {
                         required: 'Telefone é obrigatório',
+                        onChange: (e) => {
+                          e.target.value = formatPhone(e.target.value);
+                        },
                       })}
+                      maxLength={10}
                     />
                   </div>
                 </div>
