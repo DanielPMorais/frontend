@@ -1,6 +1,6 @@
-import useStoreUser from '@/hooks/use-store-user';
+// import useStoreUser from '@/hooks/use-store-user'; // TEMPORARIAMENTE COMENTADO
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
-import { toast } from 'sonner';
+// import { toast } from 'sonner'; // TEMPORARIAMENTE COMENTADO
 
 const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 if (!baseUrl) {
@@ -23,14 +23,19 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     if (error.response && error.response.status === 401) {
-      toast.error('Sua sessão expirou. Por favor, faça login novamente.');
+      // TEMPORARIAMENTE DESABILITADO - Interceptor 401
+      // toast.error('Sua sessão expirou. Por favor, faça login novamente.');
 
-      const { resetStore } = useStoreUser.getState();
-      resetStore();
+      // const { resetStore } = useStoreUser.getState();
+      // resetStore();
 
-      setTimeout(() => {
-        window.location.href = '/auth/login';
-      }, 5000);
+      // setTimeout(() => {
+      //   window.location.href = '/auth/login';
+      // }, 5000);
+      
+      console.warn(
+        'Erro 401 detectado - redirecionamento desabilitado temporariamente',
+      );
     } else if (error.response && error.response.status === 403) {
       console.warn(
         'Interceptador: Acesso proibido (403). O usuário está logado, mas não tem permissão.',

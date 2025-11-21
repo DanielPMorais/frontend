@@ -13,9 +13,10 @@ export function useAuthGuard() {
   const hasHydrated = useStoreUser((state) => state._hasHydrated);
 
   useEffect(() => {
-    if (hasHydrated && !user.isAuthenticated) {
-      router.replace('/auth/login');
-    }
+    // TEMPORARIAMENTE DESABILITADO - Auth guard
+    // if (hasHydrated && !user.isAuthenticated) {
+    //   router.replace('/auth/login');
+    // }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
